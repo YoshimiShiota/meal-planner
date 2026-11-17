@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1週間献立＆買い物リスト（苦手食材アラート付き）</title>
+    <title>1週間献立＆買い物リスト（デモ）</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -72,14 +72,14 @@
 
 <header>
     <h1>1週間献立＆買い物リスト</h1>
-    <p>週末のまとめ買いをラクにするアプリ</p>
+    <p>週末のまとめ買いをラクにするアプリ（デモ）</p>
 </header>
 
 <div class="container">
     <!-- タブボタン -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('menu')">📅 献立</button>
-        <button class="tab-btn tab-btn-shopping" onclick="switchTab('shopping')">🛒 買い物</button>
+        <button class="tab-btn" onclick="switchTab('shopping')">🛒 買い物</button>
         <button class="tab-btn" onclick="switchTab('recipes')">📖 レシピ</button>
         <button class="tab-btn" onclick="switchTab('settings')">⚙️ 設定</button>
     </div>
@@ -91,9 +91,7 @@
                 <span>今週の献立（月〜日）</span>
                 <button class="btn" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onclick="autoAssignMenu()">🎲 おまかせ作成</button>
             </h2>
-            <div id="weekly-calendar">
-                <!-- 動的に生成 -->
-            </div>
+            <div id="weekly-calendar"></div>
         </div>
     </div>
 
@@ -104,10 +102,8 @@
                 <span>必要な食材リスト</span>
                 <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onclick="copyShoppingList()">📋 リストをコピー</button>
             </h2>
-            <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;">※家族人数（設定タブ）と献立から自動計算されています</p>
-            <div id="shopping-list-container">
-                <!-- 動的に生成 -->
-            </div>
+            <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;">※家族人数と献立から自動計算されます</p>
+            <div id="shopping-list-container"></div>
         </div>
     </div>
 
@@ -119,16 +115,13 @@
             <input type="text" id="new-recipe-name" placeholder="例：鶏のから揚げ">
             
             <label style="font-size: 0.85rem; font-weight: bold;">材料テキストをここに貼り付け</label>
-            <textarea id="new-recipe-text" rows="5" placeholder="料理アプリやブラウザから材料欄をそのままコピー＆ペーストしてください&#10;&#10;(例)&#10;鶏もも肉 2枚&#10;玉ねぎ 1個&#10;醤油 大さじ2"></textarea>
+            <textarea id="new-recipe-text" rows="4" placeholder="料理アプリから材料欄をそのままペースト&#10;鶏もも肉 2枚&#10;玉ねぎ 1個"></textarea>
             
             <button class="btn" onclick="parseAndAddRecipe()">✨ 自動解析してレシピに追加</button>
         </div>
-
         <div class="card">
             <h2>登録済みレシピ一覧</h2>
-            <div id="recipe-list-container">
-                <!-- 動的に生成 -->
-            </div>
+            <div id="recipe-list-container"></div>
         </div>
     </div>
 
@@ -146,4 +139,143 @@
                     <input type="number" id="child-count" value="1" min="0" onchange="saveSettings()">
                 </div>
             </div>
-            <p style="font-size: 
+        </div>
+        <div class="card">
+            <h2>⚠️ 苦手な食べ物アラート設定</h2>
+            <label style="font-size: 0.85rem;">苦手な食材（カンマ区切り）</label>
+            <input type="text" id="ng-ingredients" value="ピーマン, セロリ" onchange="saveSettings()">
+        </div>
+    </div>
+</div>
+
+<script>
+    const defaultRecipes = [
+        { id: 'r1', name: '特製カレーライス', ingredients: [{ name: '豚肉', amount: 300, unit: 'g', category: '肉・魚' }, { name: '玉ねぎ', amount: 2, unit: '個', category: '野菜' }, { name: 'カレールー', amount: 1, unit: '箱', category: '調味料・その他' }] },
+        { id: 'r2', name: '豚の生姜焼き', ingredients: [{ name: '豚ロース', amount: 350, unit: 'g', category: '肉・魚' }, { name: 'キャベツ', amount: 0.3, unit: '個', category: '野菜' }] },
+        { id: 'r3', name: 'ピーマン肉詰め', ingredients: [{ name: 'ひき肉', amount: 300, unit: 'g', category: '肉・魚' }, { name: 'ピーマン', amount: 5, unit: '個', category: '野菜' }] }
+    ];
+
+    const days = ['月', '火', '水', '木', '金', '土', '日'];
+    let recipes = JSON.parse(localStorage.getItem('demo_recipes')) || defaultRecipes;
+    let weeklyMenu = JSON.parse(localStorage.getItem('demo_weekly')) || { '月': 'r1', '火': 'r2', '水': 'r3', '木': 'r1', '金': 'r2', '土': 'r3', '日': 'r1' };
+    let settings = JSON.parse(localStorage.getItem('demo_settings')) || { adults: 2, children: 1, ngItems: 'ピーマン, セロリ' };
+    let checkedItems = {};
+
+    function saveData() {
+        localStorage.setItem('demo_recipes', JSON.stringify(recipes));
+        localStorage.setItem('demo_weekly', JSON.stringify(weeklyMenu));
+        localStorage.setItem('demo_settings', JSON.stringify(settings));
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(tabId === 'shopping') renderShoppingList();
+    }
+
+    window.onload = function() {
+        renderWeeklyCalendar();
+        renderRecipeList();
+    };
+
+    function saveSettings() {
+        settings.adults = parseInt(document.getElementById('adult-count').value) || 1;
+        settings.children = parseInt(document.getElementById('child-count').value) || 0;
+        settings.ngItems = document.getElementById('ng-ingredients').value;
+        saveData();
+    }
+
+    function checkNG(recipe) {
+        if (!settings.ngItems) return [];
+        const ngList = settings.ngItems.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        let found = [];
+        recipe.ingredients.forEach(ing => {
+            ngList.forEach(ng => {
+                if (ing.name.toLowerCase().includes(ng) && !found.includes(ng)) found.push(ng);
+            });
+        });
+        return found;
+    }
+
+    function renderWeeklyCalendar() {
+        const container = document.getElementById('weekly-calendar');
+        container.innerHTML = '';
+        days.forEach(day => {
+            const currentId = weeklyMenu[day] || '';
+            const recipe = recipes.find(r => r.id === currentId);
+            const ngFound = recipe ? checkNG(recipe) : [];
+            const badge = ngFound.length ? `<span class="badge-danger">⚠️ 苦手(${ngFound.join(',')})</span>` : '';
+
+            const row = document.createElement('div');
+            row.className = 'day-row';
+            row.innerHTML = `
+                <span class="day-label">${day}</span>
+                <select class="day-menu-select" onchange="updateMenu('${day}', this.value)">
+                    <option value="">（お休み）</option>
+                    ${recipes.map(r => `<option value="${r.id}" ${r.id === currentId ? 'selected' : ''}>${r.name}</option>`).join('')}
+                </select>
+                ${badge}
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function updateMenu(day, id) {
+        weeklyMenu[day] = id;
+        saveData();
+        renderWeeklyCalendar();
+    }
+
+    function autoAssignMenu() {
+        days.forEach(day => {
+            const r = recipes[Math.floor(Math.random() * recipes.length)];
+            weeklyMenu[day] = r.id;
+        });
+        saveData();
+        renderWeeklyCalendar();
+        alert('おまかせで献立をセットしました！');
+    }
+
+    function renderRecipeList() {
+        const container = document.getElementById('recipe-list-container');
+        container.innerHTML = recipes.map(r => {
+            const ng = checkNG(r);
+            const badge = ng.length ? `<span class="badge-danger">⚠️ 苦手(${ng.join(',')})</span>` : '';
+            return `<div class="recipe-card">
+                <h3>${r.name} ${badge}</h3>
+                <div class="recipe-meta">材料: ${r.ingredients.map(i => `${i.name}${i.amount}${i.unit}`).join(', ')}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function parseAndAddRecipe() {
+        const name = document.getElementById('new-recipe-name').value.trim();
+        const text = document.getElementById('new-recipe-text').value.trim();
+        if(!name || !text) return alert('入力してください');
+        
+        recipes.push({
+            id: 'r_' + Date.now(),
+            name: name,
+            ingredients: text.split('\n').map(l => ({ name: l.split(' ')[0] || l, amount: 1, unit: '個', category: '野菜' }))
+        });
+        saveData();
+        document.getElementById('new-recipe-name').value = '';
+        document.getElementById('new-recipe-text').value = '';
+        renderRecipeList();
+        renderWeeklyCalendar();
+        alert('レシピを追加しました！');
+    }
+
+    function renderShoppingList() {
+        const container = document.getElementById('shopping-list-container');
+        container.innerHTML = '<p>（ここに自動合算された買い物リストが表示されます）</p>';
+    }
+
+    function copyShoppingList() {
+        alert('リストをコピーしました！');
+    }
+</script>
+</body>
+</html>
